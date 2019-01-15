@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MIDI Keyboard</title>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+  <!-- shims
+  <script src="./js/shim/Base64.js" type="text/javascript"></script>
+  <script src="./js/shim/Base64binary.js" type="text/javascript"></script>
+  <script src="./js/shim/WebAudioAPI.js" type="text/javascript"></script>-->
+  <!-- midijs_plus-->
+  <script src="./midijs_plus-0.2.0.js" type="text/javascript"></script>
+  <!-- utils-->
+  <script src="./dom_request_xhr.js" type="text/javascript"></script>
+  <script src="./dom_request_script.js" type="text/javascript"></script>
+</head>
+<body>
+
+  <ul class="nav navbar-nav">
+            <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Keyboard<span class="caret"></span></a>
+              <ul class="dropdown-menu" style="width:950px">
+                <li>
+                  <form id="keyboard_panel" style="height:150px">
+                    <svg id="keyboard" xmlns="http://www.w3.org/2000/svg" version="1.1" style="background-color:#FFF; border:groove; alignment-adjust:central;"></svg>
+                  </form>
+                </li>
+                <li class="divider" role="separator"></li>
+                <li><a id="keyboard_controls">
+                    <label for="amplitude">amplitude (0 - 127):</label>
+                    <input class="form-control progress" id="amplitude" type="range" min="0" max="127" value="100" style="width:200px;"></a></li>
+              </ul>
+            </li>
+            <li class="dropdown"><a class="dropdown-toggle" href="#" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Chords<span class="caret"></span></a>
+              <ul class="dropdown-menu" style="width:240px">
+                <li><a id="mode_panel"></a></li>
+              </ul>
+            </li>
+            <li class="dropdown"><a class="dropdown-toggle" href="#" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Drums<span class="caret"></span></a>
+              <ul class="dropdown-menu" style="width:200px">
+                <li>
+                  <form id="drum_panel"></form>
+                </li>
+                <li class="divider" role="separator"></li>
+                <li><a id="drum_controls">
+                    <lable for="drum_amplitude">amplitude (0 - 127):</lable>
+                    <input class="form-control progress" id="drum_amplitude" type="range" min="0" max="127" value="88" style="width:120px;"></a></li>
+              </ul>
+            </li>
+
+  </ul>
+
+
+<script src="./keyboard.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+    // keybinder utility
+    var keybinder = function(){
+      var ele;
+      var act = [];
+      function testFunc(e){
+        console.log(e.key);
+      }
+      function bind(id, f1, f2){
+        ele = $(id);
+        act = [f1, f2];
+        if(act[0] == null)
+          act[0] = testFunc;
+        ele.on('keydown',act[0]);
+        ele.on('keyup', act[1]);
+      }
+      function unbind(){
+        if(ele == null){
+          return;
+        }
+        ele.off('keydown', act[0]);
+        ele.off('keyup', act[1]);
+        ele = null;
+        act = [];
+      }
+      this.bind = bind;
+      this.unbind = unbind;
+
+    };
+
+    var app = app || {};
+
+    var file_open_handlers = file_open_handlers || {};
+    
+    var click_event_list = click_event_list || {};
+    
+
+    // test
+    $(document).ready(function(){
+      // make UI
+      var ww = 9, wh = 130;
+      $("#keyboard").css({"height": wh, "width": ww * 104}).html(make_keyboard());
+      $('#mode_panel').html(make_modeboard(["maj","min","aug", "dim", "dom7", "maj7", "min7"]));
+    	app.keyboard = new keybinder();
+      app.keyboard.bind('#amplitude',keyHandlers[0],keyHandlers[1]);
+      app.drums = new keybinder();
+      app.drums.bind('#drum_amplitude', drumHandlers[0], drumHandlers[1]);
+
+
+      var pre = "https://scoreur.github.io/gen/";
+  
+      MIDI.loadPlugin({
+        soundfontUrl: pre + "soundfont/",
+        instrument: ["acoustic_grand_piano", "percussion"],
+        onprogress: function(state, progress) {
+          //console.log(state, progress);
+        },
+        onsuccess: function() {
+          // At this point the MIDI system is ready to be used
+          MIDI.setVolume(0, 100); // Set the general volume level
+          MIDI.programChange(0, 0);
+          MIDI.programChange(1,0);
+          MIDI.programChange(9,128);
+          MIDI.setVolume(9, 96);
+        }
+      });
+
+
+      // register, using FileLoader
+      for(var id in file_open_handlers){
+        openFor(id, file_open_handlers[id]);
+      }
+      // register clicks
+      for(var i in click_event_list){
+        $('#'+i).on('click', click_event_list[i]);
+      }
+      // Set up the event handlers for all the buttons
+      $(".kb").on("mousedown", handlePianoKeyPress)
+        .on("mouseout", handlePianoKeyRelease)
+        .on("mouseup", handlePianoKeyRelease);
+    });
+
+</script>
+</body>
+
+<!--
+ul.nav.navbar-nav
+  li.dropdown
+    a.dropdown-toggle(data-toggle='dropdown', role='button', aria-haspopup='true', aria-expanded='false') Keyboard
+      span.caret
+    ul.dropdown-menu(style='width:950px')
+      li
+        form#keyboard_panel(style='height:150px')
+          svg#keyboard(xmlns="http://www.w3.org/2000/svg" version="1.1" style="background-color:#FFF; border:groove; alignment-adjust:central;")
+      li.divider(role='separator')
+      li
+        a#keyboard_controls
+          label(for='amplitude') amplitude (0 - 127):
+          input#amplitude.form-control.progress(type='range', min='0', max='127', value='100', style='width:200px;')
+  li.dropdown
+    a.dropdown-toggle(href='#', data-toggle='dropdown', role='button', aria-haspopup='true', aria-expanded='false') Chords
+      span.caret
+    ul.dropdown-menu(style='width:240px')
+      li
+        a#mode_panel
+  li.dropdown
+    a.dropdown-toggle(href='#', data-toggle='dropdown', role='button', aria-haspopup='true', aria-expanded='false') Drums
+      span.caret
+    ul.dropdown-menu(style='width:200px')
+      li
+        form#drum_panel
+      li.divider(role='separator')
+      li
+        a#drum_controls
+          lable(for='drum_amplitude') amplitude (0 - 127):
+          input#drum_amplitude.form-control.progress(type='range', min='0', max='127', value='88', style='width:120px;')
+
+-->
+</html>
