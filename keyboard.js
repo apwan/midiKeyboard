@@ -200,6 +200,7 @@
         if(typeof pressed[pitch] != 'undefined'){
             return;
         }
+        console.log('press ' + pitch);
         var mode = $(":radio[name=musicMode]:checked").val();
         pressed[pitch] = mode == "single" ? [0] : MG.chord_class[mode];
         this_amplitude = parseInt($("#amplitude").val());
@@ -222,18 +223,21 @@
         // Send the note off message to match the pitch of the current note on event
         pressed[pitch].slice().forEach(function (el) {
             if (pitch + el > 108) return;
+            console.log('release ' + pitch);
             MIDI.noteOff(0, pitch + el);
             $('.kb[data-piano-key-number=' + (pitch + el) + ']').css("fill", keycolor[(pitch + el) % 12]);
 
         });
-        delete pressed[pitch];
+        setTimeout(function(){delete pressed[pitch];}, 400);// temporarily avoid repeated hit key on touch device
+        // ultimately, should seperate mouse/touch events
+        
     };
 
-    self.handlePianoKeyRelease = function(evt){
-        release(parseInt($(evt.target).data("piano-key-number")));
+    self.handlePianoKeyRelease = function(target){
+        release(parseInt($(target).data("piano-key-number")));
     };
-    self.handlePianoKeyPress = function handlePianoKeyPress(evt) {
-        var pitch = parseInt($(evt.target).data("piano-key-number"));
+    self.handlePianoKeyPress = function handlePianoKeyPress(target) {
+        var pitch = parseInt($(target).data("piano-key-number"));
         pressing(pitch);
     };
     self.make_keyboard = make_keyboard;
@@ -248,6 +252,7 @@
         if(typeof pressed[kit] != 'undefined'){
             return;
         }
+
         var amplitude = parseInt($('#drum_amplitude').val());
         MIDI.noteOn(9, kit, amplitude);
         pressed[kit] = kit;
