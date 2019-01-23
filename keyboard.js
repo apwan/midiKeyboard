@@ -223,7 +223,7 @@
         // Send the note off message to match the pitch of the current note on event
         pressed[pitch].slice().forEach(function (el) {
             if (pitch + el > 108) return;
-            console.log('release ' + pitch);
+            //console.log('release ' + pitch);
             MIDI.noteOff(0, pitch + el);
             $('.kb[data-piano-key-number=' + (pitch + el) + ']').css("fill", keycolor[(pitch + el) % 12]);
 
